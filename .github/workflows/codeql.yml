@@ -49,18 +49,12 @@ jobs:
             -p 8080:8080 \
             go-web-server
 
+
       - name: Test readfile endpoint
         run: |
-          for i in $(seq 1 15); do
-            if curl --fail \
-              "http://localhost:8080/readfile?file=hello.txt"; then
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "The readfile endpoint test failed"
-          docker logs go-web-server
-          exit 1
+          curl --fail --retry 10 --retry-connrefused --retry-delay 2 \
+            "http://localhost:8080/readfile?file=hello.txt"
+
 
       - name: Stop Docker container
         if: always()
