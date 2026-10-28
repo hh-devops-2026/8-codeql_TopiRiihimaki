@@ -30,6 +30,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
 
+  
   docker:
     name: Docker Build & Run
     runs-on: ubuntu-latest
@@ -43,18 +44,28 @@ jobs:
         run: docker build -t go-web-server .
 
       - name: Run Docker container
-        run: |
-          docker run -d \
-            --name go-web-server \
-            -p 8080:8080 \
-            go-web-server
+        run: docker run -d --name go-web-server -p 8080:8080 go-web-server
 
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 15); do
+            if curl -sS http://localhost:8080/ -o /dev/null; then
+              echo "Server is responding"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server did not respond"
+          docker logs go-web-server
+          exit 1
 
       - name: Test readfile endpoint
         run: |
-          curl --fail --retry 10 --retry-connrefused --retry-delay 2 \
-            "http://localhost:8080/readfile?file=hello.txt"
+          curl --fail http://localhost:8080/readfile?file=safe-files/hello.txt
 
+      - name: Show container logs
+        if: always()
+        run: docker logs go-web-server || true
 
       - name: Stop Docker container
         if: always()
